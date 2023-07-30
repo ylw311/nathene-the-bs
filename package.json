@@ -19,7 +19,8 @@
     },
     "homepage": "https://github.com/kgorgi/starter-snake-node-ts#readme",
     "dependencies": {
-        "express": "^4.17.2",
+        "body-parser": "^1.20.2",
+        "express": "^4.18.2",
         "typescript": "^4.5.5"
     },
     "devDependencies": {
