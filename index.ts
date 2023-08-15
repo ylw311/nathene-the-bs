@@ -1,7 +1,7 @@
 import bodyParser from 'body-parser'
 import express, { Request, Response } from 'express'
 
-import { SnakeInfo, Move, Direction, GameRequest } from './types'
+import { SnakeInfo, Move, Direction, GameRequest, GameState, Coordinates } from './types'
 
 
 const PORT = process.env.PORT || 3000
@@ -77,7 +77,7 @@ function handleMove(request: GameRequest, response: Response<Move>) {
 
     const moves: Direction[]  = ['up', 'down', 'left', 'right']
   
-    
+
     let possibleCells = moves.map(move => {
         let dx = 0;
         let dy = 0;
@@ -120,13 +120,32 @@ function handleMove(request: GameRequest, response: Response<Move>) {
     }).filter((cell): cell is { x: number; y: number; direction: Direction } => cell !== null && cell !== undefined);
     // Filter out null cells
     
+ 
+    const updatedMoves: { [snakeId: string]: Coordinates } = {
+        [gameData.you.id]: request.body.you.body[0], // Current coord of your snake
+    };
+
+
+    for (const snake of snakes) {
+        if (snake.id !== gameData.you.id) {
+            updatedMoves[snake.id] = snake.body[0]; // Current coord of the snake
+        }
+    }
+
+    console.log("pre tree search" +JSON.stringify(possibleCells));
+
+
+    // generateMoveTree(gameData, 10, possibleCells, updatedMoves, gameData.you.id);
+    console.log("after tree search" +JSON.stringify(possibleCells));
+
+
+    
     // Now, possibleCells contains only safe and valid moves
-    
-    
+
     // Create a copy of possibleCells 
     let possibleCellsWOAbsDeath = [...possibleCells]; 
 
-    if (possibleCells.length !== 1) {
+    if (possibleCells.length > 1) {
         console.log("more than 1 possible cell");
     
       
@@ -155,24 +174,12 @@ function handleMove(request: GameRequest, response: Response<Move>) {
     console.log("possibleCells" + JSON.stringify(possibleCells, null, 2));
 
     
-    // ... Rest of the code
-    
 
-    
-
-//    filter(direction => {
-        // dont hit body piece 
-    //     return !body.find((piece: { x: number; y: number }) => piece.x === direction.x && piece.y === direction.y);
-
-    // })
-
-
-     // Choose a move based on A* pathfinding toward the closest food
     let bestMove: Direction | undefined = undefined;
     let shortestPathLength = Infinity;
 
     for (const cell of possibleCells) {
-        if (cell) { // Add this null check
+        if (cell) { 
             const pathToFood = aStarSearch(board, cell, closestFood.food);
             if (pathToFood && pathToFood.length < shortestPathLength) {
                 shortestPathLength = pathToFood.length;
@@ -227,7 +234,6 @@ class Node {
     }
 }
 
-// A* pathfinding algorithm
 function aStarSearch(board: any, start: { x: number; y: number }, goal: { x: number; y: number }): Node[] | null {
     const openList: Node[] = [new Node(start.x, start.y)];
     const closedList: Node[] = [];
@@ -279,5 +285,137 @@ function aStarSearch(board: any, start: { x: number; y: number }, goal: { x: num
     return null; // No path found
 }
 
+// function generateMoveTree(
+//     gameData: any,
+//     depth: number,
+//     possibleCells: {
+//         x: number;
+//         y: number;
+//         direction: Direction;
+//     }[],
+//     updatedMoves: { [snakeId: string]: Coordinates },
+//     natheneSnakeId: string
+// ) {
+//     if (depth === 0) {
+//         return;
+//     }
+
+//     const cellsToCheck = [...possibleCells];
+
+//     for (const cell of cellsToCheck) {
+//         // const clonedGameData = JSON.parse(JSON.stringify(gameData));
+
+//         const newHead = simulateMove(gameData, cell.direction, updatedMoves);
+
+//         const isSafe = isMoveSafe(newHead, gameData.board);
+
+//         if (isSafe) {
+//             // const yourSnake = gameData.board.snakes.find((snake: { id: string }) => snake.id === yourSnakeId);
+//             // if (yourSnake) {
+//             //     yourSnake.body.unshift(newHead);
+//             //     yourSnake.body.pop();
+//             // }
+
+//             updatedMoves[natheneSnakeId] = newHead;
+
+//             // Generate next set of possible cells
+//             const possibleNextCells = generateNextCells(gameData.board, newHead);
+
+//             generateMoveTree(
+//                 gameData,
+//                 depth - 1,
+//                 possibleNextCells,
+//                 updatedMoves,
+//                 natheneSnakeId
+//             );
+//         } else {
+//             // death
+//             const cellIndex = possibleCells.indexOf(cell);
+//             if (cellIndex !== -1) {
+//                 possibleCells.splice(cellIndex, 1);
+//             }
+//         }
+//     }
+// }
 
 
+// function isMoveSafe(newHead: Coordinates, board: any): boolean {
+//     if (
+//         newHead.x >= 0 && newHead.x < board.width &&
+//         newHead.y >= 0 && newHead.y < board.height
+//     ) {
+//         const isSafe = !board.snakes.some((snake: { body: any[] }) =>
+//             snake.body.some((piece: { x: number; y: number }) =>
+//                 piece.x === newHead.x && piece.y === newHead.y
+//             )
+//         );
+
+//         console.log("occupied by others")
+        
+//         return isSafe;
+//     }
+
+//     console.log("out of bounds move")
+//     return false; 
+// }
+
+// function generateNextCells(board: any, newHead: Coordinates): {
+//     x: number;
+//     y: number;
+//     direction: Direction;
+// }[] {
+//     const moves: Direction[] = ['up', 'down', 'left', 'right'];
+
+//     const possibleNextCells = moves.map(move => {
+//         let dx = 0;
+//         let dy = 0;
+
+//         if (move === 'up') {
+//             dy = 1;
+//         } else if (move === 'down') {
+//             dy = -1;
+//         } else if (move === 'left') {
+//             dx = -1;
+//         } else if (move === 'right') {
+//             dx = 1;
+//         }
+
+//         const nextX = newHead.x + dx;
+//         const nextY = newHead.y + dy;
+
+//         const isSafe = (
+//             nextX >= 0 && nextX < board.width &&
+//             nextY >= 0 && nextY < board.height &&
+//             !board.snakes.some((snake: { body: any[] }) =>
+//                 snake.body.some((piece: { x: number; y: number }) =>
+//                     piece.x === nextX && piece.y === nextY
+//                 )
+//             )
+//         );
+
+//         return isSafe ? { x: nextX, y: nextY, direction: move } : null;
+//     }).filter(cell => cell !== null) as {
+//         x: number;
+//         y: number;
+//         direction: Direction;
+//     }[];
+
+//     return possibleNextCells;
+// }
+
+// function simulateMove(gameData: any, move: Direction, updatedMoves: { [snakeId: string]: Coordinates }): Coordinates {
+//     const head = updatedMoves[gameData.you.id];
+//     let newHead = { ...head };
+
+//     if (move === 'up') {
+//         newHead.y += 1;
+//     } else if (move === 'down') {
+//         newHead.y -= 1;
+//     } else if (move === 'left') {
+//         newHead.x -= 1;
+//     } else if (move === 'right') {
+//         newHead.x += 1;
+//     }
+
+//     return newHead;
+// }
